@@ -3,7 +3,7 @@ import pandas as pd
 from transformers import GPT2LMHeadModel, GPT2Tokenizer, TextDataset, DataCollatorForLanguageModeling, Trainer, TrainingArguments
 import torch
 import os
-from google_drive_connector import GoogleDriveConnector
+import requests
 
 
 
@@ -77,10 +77,18 @@ def get_tokenizer():
 
 
 def load_model_and_generate(prompt, tokenizer):
-    connector = GoogleDriveConnector()
     file_id = '1gIDQlNkrGToqN8nrjtWrmtGLDvioheLh'
+    download_url = f'https://drive.google.com/uc?id={file_id}'
     local_path = 'data/model_rugpt3large.pkl'
-    connector.download_file(file_id, local_path)
+    
+    response = requests.get(download_url)
+    if response.status_code != 200:
+        print('Failed to download the file.')
+        return ""
+    with open(local_path, 'wb') as f:
+        f.write(response.content)
+    print('File downloaded successfully.')
+
     with open(local_path, "rb") as file:
         model = load(file)
 
@@ -100,9 +108,3 @@ def load_model_and_generate(prompt, tokenizer):
     generated_text = list(map(tokenizer.decode, out))[0]
 
     return generated_text
-
-
-if __name__ == "__main__":
-    train_path = open_and_preprocess_data()
-    tokenizer = get_tokenizer()
-    load_model_and_generate(prompt, tokenizer)
