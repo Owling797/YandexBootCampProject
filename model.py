@@ -3,7 +3,13 @@ import pandas as pd
 from transformers import GPT2LMHeadModel, GPT2Tokenizer, TextDataset, DataCollatorForLanguageModeling, Trainer, TrainingArguments
 import torch
 import os
+import requests
 
+#import boto3
+#import grpc
+#import yandexcloud
+#from yandex.cloud.storage.v1.bucket_service_pb2_grpc import BucketServiceStub
+#from yandex.cloud.storage.v1.bucket_service_pb2 import GetBucketRequest
 
 def open_and_preprocess_data(folder_path="data/texts"):
     train_path = 'data/train_dataset.txt'
@@ -69,7 +75,15 @@ def get_tokenizer():
 
 
 def load_model_and_generate(prompt, tokenizer):
-    local_path = 'data/model_rugpt3large_gpt2_based.pkl'
+    download_url = "https://storage.yandexcloud.net/stud.camp.models/model_rugpt3large_gpt2_based.pkl"
+    local_path = 'data/model_rugpt3large.pkl'
+    response = requests.get(download_url)
+    if response.status_code != 200:
+        print('Failed to download the file.')
+        return ""
+    with open(local_path, 'wb') as f:
+        f.write(response.content)
+    print('File downloaded successfully.')
 
     with open(local_path, "rb") as file:
         model = load(file)
