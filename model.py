@@ -4,13 +4,73 @@ from transformers import GPT2LMHeadModel, GPT2Tokenizer, TextDataset, DataCollat
 import torch
 import os
 import requests
+from torchtext.vocab import build_vocab_from_iterator
 
-#import boto3
-#import grpc
-#import yandexcloud
-#from yandex.cloud.storage.v1.bucket_service_pb2_grpc import BucketServiceStub
-#from yandex.cloud.storage.v1.bucket_service_pb2 import GetBucketRequest
 
+### Self-made NN ###
+# Шаг 4: Создание модели
+import math
+import torch
+from torch import nn
+
+class PositionalEncoding(nn.Module):
+    def __init__(self, d_model, max_len=5000):
+        super(PositionalEncoding, self).__init__()
+
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * -(math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        pe = pe.unsqueeze(0).transpose(0, 1)
+        self.register_buffer('pe', pe)
+
+    def forward(self, x):
+        return x + self.pe[:x.size(0), :]
+
+
+class VerseGenerator(nn.Module):
+    def __init__(self, vocab_size, embedding_dim, hidden_dim, num_layers, dropout_p):
+        super(VerseGenerator, self).__init__()
+        self.embed = nn.Embedding(vocab_size, embedding_dim)
+        self.pos_encoder = PositionalEncoding(embedding_dim)
+        self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers, batch_first=True, dropout=dropout_p)
+        self.fc = nn.Linear(hidden_dim, vocab_size)
+
+    def forward(self, x):
+        x = self.embed(x)
+        x = self.pos_encoder(x)
+        output, _ = self.lstm(x)
+        output = self.fc(output)
+        return output
+
+
+def load_model_checkpoint(path, vocab_length):
+    checkpoint = download_model(path)
+    model = VerseGenerator(vocab_size=vocab_length, embedding_dim=100, hidden_dim=256, num_layers=2, dropout_p=0.2)
+    model.load_state_dict(checkpoint['model_state_dict'])
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    epoch = checkpoint['epoch']
+    loss = checkpoint['loss']
+    return model, optimizer, epoch, loss
+
+
+def generate_verse(model, start_token, length, vocab, device, temperature):
+    model.eval()
+    verse = [start_token]
+    for _ in range(length):
+        input = torch.tensor([verse[-1]])
+        output = model(input)
+        # Применение температуры к выходным данным
+        output = output / temperature
+        probabilities = torch.nn.functional.softmax(output, dim=2)
+        next_token = torch.multinomial(probabilities.view(-1), num_samples=1)
+        verse.append(next_token.item())
+    return ' '.join(vocab.get_itos()[token] for token in verse)
+
+
+### Tuned RuGPT ###
 def open_and_preprocess_data(folder_path="data/texts"):
     train_path = 'data/train_dataset.txt'
     with open(train_path, "w", encoding="utf-8") as train_file:
@@ -32,6 +92,7 @@ def open_and_preprocess_data(folder_path="data/texts"):
         f.writelines(non_empty_lines)
         
     return train_path
+
 
 def get_tokenizer():
     model_name_or_path = "sberbank-ai/rugpt3large_based_on_gpt2"
@@ -74,9 +135,9 @@ def get_tokenizer():
     return tokenizer
 
 
-def load_model_and_generate(model_name, prompt, tokenizer):
+def download_model(model_name):
     download_url = f"https://storage.yandexcloud.net/stud.camp.models/{model_name}"
-    local_path = f'data/{model_name}'
+    local_path = f'models/{model_name}'
     response = requests.get(download_url)
     if response.status_code != 200:
         print('Failed to download the file.')
@@ -84,10 +145,15 @@ def load_model_and_generate(model_name, prompt, tokenizer):
     with open(local_path, 'wb') as f:
         f.write(response.content)
     print('File downloaded successfully.')
-
     with open(local_path, "rb") as file:
         model = load(file)
+    return model
 
+
+def generate_by_gpt(model_name, prompt):
+    tokenizer = get_tokenizer()
+    model = download_model(model_name)
+        
     DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     input_ids = tokenizer.encode(prompt, return_tensors="pt").to(DEVICE)
 
@@ -101,6 +167,26 @@ def load_model_and_generate(model_name, prompt, tokenizer):
                             max_length=128,
                             )
 
-    generated_text = list(map(tokenizer.decode, out))[0]
+    return list(map(tokenizer.decode, out))[0]
+
+
+def generate_by_rnn():
+    tokens = download_model('tokens.pkl')
+    vocab = build_vocab_from_iterator(tokens)
+    model, optimizer, start_epoch, loss = load_model_checkpoint('RMG_checkpoint.pkl', len(vocab))
+    start_token = vocab['<START>']  
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    return generate_verse(model, start_token, 30, vocab, device, temperature=0.5)
+
+
+def load_model_and_generate(model_name, prompt):
+    if model_name == "model_rugpt3large_gpt2_based.pkl":
+        generated_text = generate_by_gpt(model_name, prompt)
+        
+    elif model_name == "RMG_checkpoint1.pkl":
+        generated_text = generate_by_rnn()
+    
+    else:
+        generated_text = "other"
 
     return generated_text

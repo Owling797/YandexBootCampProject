@@ -1,7 +1,7 @@
 import pandas as pd
 import streamlit as st
 from PIL import Image
-from model import open_and_preprocess_data, get_tokenizer, load_model_and_generate
+from model import load_model_and_generate
 
 
 def process_main_page():
@@ -34,14 +34,9 @@ def write_generation_result(prediction_result):
 def process_side_bar_inputs():
     st.sidebar.header('Input parameters')
     input_features = sidebar_input_features()
-    #model_type, prompt = input_features['model_type'], input_features['prompt']
     try:
-    #if input_features['model_type'] == "RuGPT finetuned":
-        #train_path = open_and_preprocess_data()
-        tokenizer = get_tokenizer()
-        generation_result = load_model_and_generate(input_features['model_type'], input_features['prompt'], tokenizer)
+        generation_result = load_model_and_generate(input_features['model_type'], input_features['prompt'])
         write_generation_result(generation_result)
-    #elif input_features['model_type'] == "Self-made":
     except:
         write_generation_result("Exception. Another model")
 
