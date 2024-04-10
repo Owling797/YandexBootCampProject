@@ -74,9 +74,9 @@ def get_tokenizer():
     return tokenizer
 
 
-def load_model_and_generate(prompt, tokenizer):
-    download_url = "https://storage.yandexcloud.net/stud.camp.models/model_rugpt3large_gpt2_based.pkl"
-    local_path = 'data/model_rugpt3large.pkl'
+def load_model_and_generate(model_name, prompt, tokenizer):
+    download_url = f"https://storage.yandexcloud.net/stud.camp.models/{model_name}"
+    local_path = f'data/{model_name}'
     response = requests.get(download_url)
     if response.status_code != 200:
         print('Failed to download the file.')

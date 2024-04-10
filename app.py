@@ -36,11 +36,17 @@ def process_side_bar_inputs():
     input_features = sidebar_input_features()
     #model_type, prompt = input_features['model_type'], input_features['prompt']
     if input_features['model_type'] == "RuGPT finetuned":
+        model_name = "model_rugpt3large_gpt2_based.pkl"
         #train_path = open_and_preprocess_data()
         tokenizer = get_tokenizer()
-        generation_result = load_model_and_generate(input_features['prompt'], tokenizer)
+        generation_result = load_model_and_generate(model_name, input_features['prompt'], tokenizer)
         write_generation_result(generation_result)
-
+    elif input_features['model_type'] == "Self-made":
+        model_name = "model.pkl"
+        #train_path = open_and_preprocess_data()
+        tokenizer = get_tokenizer()
+        generation_result = load_model_and_generate(model_name, input_features['prompt'], tokenizer)
+        write_generation_result(generation_result)
     else:
         write_generation_result("Another model")
 
