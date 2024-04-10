@@ -183,7 +183,7 @@ def load_model_and_generate(model_name, prompt):
     if model_name == "model_rugpt3large_gpt2_based.pkl":
         generated_text = generate_by_gpt(model_name, prompt)
         
-    elif model_name == "RMG_checkpoint1.pkl":
+    elif model_name == "RMG_checkpoint.pkl":
         generated_text = generate_by_rnn()
     
     else:

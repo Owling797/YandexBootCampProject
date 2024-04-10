@@ -44,7 +44,7 @@ def sidebar_input_features():
     model_type = st.sidebar.selectbox("Model", ("Self-made", "RuGPT finetuned"))
     prompt = st.text_input('Lyrics begin with:', 'Добрым словом')
     translateration = {
-        "Self-made": "RMG_checkpoint1.pkl",
+        "Self-made": "RMG_checkpoint.pkl",
         "RuGPT finetuned": "model_rugpt3large_gpt2_based.pkl",
     }
     data = {
