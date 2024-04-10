@@ -172,6 +172,7 @@ def generate_by_gpt(model_name, prompt):
 
 def generate_by_rnn():
     tokens = download_model('tokens.pkl')
+    print("downloaded tokens")
     vocab = build_vocab_from_iterator(tokens)
     model, optimizer, start_epoch, loss = load_model_checkpoint('RMG_checkpoint.pkl', len(vocab))
     start_token = vocab['<START>']  
@@ -180,6 +181,7 @@ def generate_by_rnn():
 
 
 def load_model_and_generate(model_name, prompt):
+    print(model_name)
     if model_name == "model_rugpt3large_gpt2_based.pkl":
         generated_text = generate_by_gpt(model_name, prompt)
         
