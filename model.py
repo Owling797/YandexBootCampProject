@@ -57,6 +57,7 @@ def load_model_checkpoint(path, vocab_length):
 
 
 def generate_verse(model, start_token, length, vocab, device, temperature):
+    print("generate_verse")
     model.eval()
     verse = [start_token]
     for _ in range(length):
@@ -137,20 +138,29 @@ def get_tokenizer():
 
 def download_model(model_name):
     download_url = f"https://storage.yandexcloud.net/stud.camp.models/{model_name}"
+    print("download_url", download_url)
     local_path = f'models/{model_name}'
     response = requests.get(download_url)
+    print("response", response.status_code)
     if response.status_code != 200:
         print('Failed to download the file.')
         return ""
-    with open(local_path, 'wb') as f:
-        f.write(response.content)
+    #with open(local_path, 'wb') as f:
+        #with open(local_path, "rb") as file:
+        #f.write(response.content)
+    print("loading content")
+    model = load(response.content)
+    print("end loading")
+
+
     print('File downloaded successfully.')
-    with open(local_path, "rb") as file:
-        model = load(file)
+    #with open(local_path, "rb") as file:
+    #    model = load(file)
     return model
 
 
 def generate_by_gpt(model_name, prompt):
+    print("generate_by_gpt")
     tokenizer = get_tokenizer()
     model = download_model(model_name)
         
@@ -171,6 +181,7 @@ def generate_by_gpt(model_name, prompt):
 
 
 def generate_by_rnn():
+    print("generate_by_rnn")
     tokens = download_model('tokens.pkl')
     print("downloaded tokens")
     vocab = build_vocab_from_iterator(tokens)

@@ -2,11 +2,17 @@ import pandas as pd
 import streamlit as st
 from PIL import Image
 from model import load_model_and_generate
+import requests
 
+
+FASTAPI_URL = 'http://localhost:8000'
+
+
+headers = {"Authorization": "Bearer *****"}
 
 def process_main_page():
     show_main_page()
-    process_side_bar_inputs()
+    #process_side_bar_inputs()
 
 
 def show_main_page():
@@ -18,41 +24,31 @@ def show_main_page():
         #page_icon=image,
 
     )
-    st.write(
-        """
-        Generate your own song
-        """
-    )
+    st.write("# Generate your own song")
     #st.image(image)
+    st.header('Input parameters')
+    model_name = st.selectbox("Model", ("Self-made", "RuGPT finetuned"))
+    prompt = st.text_input('Lyrics begin with:', 'Добрым словом')
+    generate_button = st.button("Generate")
+    if generate_button:
+        input_features = {
+            "model_name": model_name,
+            "input_text": prompt,
+        }
+        generate_text(input_features)
 
-
+def generate_text(input_features):
+    url = f"{FASTAPI_URL}/generate_text/"
+    response = requests.get(url, params=input_features)
+    if response.status_code == 200:
+        generation_result = response.json()['generated_text']
+        write_generation_result(generation_result)
+    else:
+        st.error("Error 😕")
+        
 def write_generation_result(prediction_result):
     st.write("## Result")
     st.write(prediction_result)
-
-
-def process_side_bar_inputs():
-    st.sidebar.header('Input parameters')
-    input_features = sidebar_input_features()
-    try:
-        generation_result = load_model_and_generate(input_features['model_type'], input_features['prompt'])
-        write_generation_result(generation_result)
-    except:
-        write_generation_result("Exception. Another model")
-
-def sidebar_input_features():
-    model_type = st.sidebar.selectbox("Model", ("Self-made", "RuGPT finetuned"))
-    prompt = st.text_input('Lyrics begin with:', 'Добрым словом')
-    translateration = {
-        "Self-made": "RMG_checkpoint.pkl",
-        "RuGPT finetuned": "model_rugpt3large_gpt2_based.pkl",
-    }
-    data = {
-        "model_type": translateration[model_type],
-        "prompt": prompt,
-    }
-    return data
-
 
 if __name__ == "__main__":
     process_main_page()
