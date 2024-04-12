@@ -3,11 +3,10 @@ import streamlit as st
 import  streamlit_toggle as tog
 from PIL import Image
 import requests
-from streamlit_extras.stylable_container import stylable_container
 
 
-FASTAPI_URL = 'http://localhost:8000'
-
+FASTAPI_URL = 'https://5a1e-2a0d-5600-1b-4000-29b1-f3ac-b68e-bd02.ngrok-free.app' # 'http://localhost:8000'
+INPUT_TEXT_RES=""
 
 headers = {"Authorization": "Bearer *****"}
 #st.set_theme('dark')
@@ -22,6 +21,8 @@ def process_main_page():
 
 
 def show_main_page():
+    global INPUT_TEXT_RES
+    print(INPUT_TEXT_RES)
     #image = Image.open('data/Bold Beats.gif')
     #video_file = open('data/video.mp4', 'rb')
     #video_bytes = video_file.read()
@@ -41,53 +42,60 @@ def show_main_page():
     #[theme]
     #base="dark"
     #primaryColor="#4bffbd"
-        
+    
+    
     with col2:
         with st.container(height=600, border=None):
+            #with st.form(key='my_form', border=False):
 
-            st.header("Lyrics & Song generator")
-            #st.video(video_bytes)
-            #st.image(image, use_column_width=True, clear_cache=True)
-            #st.header('Input parameters')
-            st.write("##### Model:")
-            model_name = st.radio("Model", ("Self-made (no prompt)", "RuGPT finetuned"), label_visibility='collapsed')
-            with st.container(border=True):
-                chastushka_audio_on = st.checkbox('Davay nashu (folklore)')
-                voice_on = st.checkbox('Pronounce')
-                audio_on = st.checkbox('Generate song!')
-            
-            if audio_on:
-                genre = st.selectbox('Select song genre', ('Rock', 'Pop', 'Folk'))
-
-            if model_name == "RuGPT finetuned":
-                st.write("\n##### Lyrics begin with:")
+                st.header("Lyrics & Song generator")
+                #st.video(video_bytes)
+                #st.image(image, use_column_width=True, clear_cache=True)
+                #st.header('Input parameters')
+                st.write("##### Model:")
+                model_name = st.radio("Model", ("Self-made (no prompt)", "RuGPT finetuned"), label_visibility='collapsed')
                 with st.container(border=True):
-                    prompt = st.text_input('Lyrics begin with:', 'Добрым словом', label_visibility='collapsed')
-            else:
-                prompt = ""
+                    chastushka_audio_on = st.checkbox('Davay nashu (folklore)')
+                    voice_on = st.checkbox('Pronounce')
+                    audio_on = st.checkbox('Generate song!')
                 
-                
-            
-            generate_button = st.button("Generate")
-            translateration = {
-                "Self-made": "RMG_checkpoint.pkl",
-                "RuGPT finetuned": "model_rugpt3large_gpt2_based.pkl",
-            }
-            if generate_button:
-                input_features = {
-                    "model_name": translateration[model_name],
-                    "input_text": prompt,
-                }
-                generation_result = generate_text(input_features)
-                if generation_result is not None:
-                    write_generation_result(generation_result)
-                    if voice_on:
-                        get_tts_result_audio(generation_result)
-                    if chastushka_audio_on:
-                        get_chastushka_audio(generation_result)
-                    if audio_on:
-                        generate_suno_audio(generation_result, genre)
+                if audio_on:
+                    genre = st.selectbox('Select song genre', ('Rock', 'Pop', 'Folk'))
 
+                if model_name == "RuGPT finetuned":
+                    st.write("\n##### Lyrics begin with:")
+                    with st.container(border=True):
+                        prompt = st.text_input('Lyrics begin with:', 'Добрым словом', label_visibility='collapsed')
+                else:
+                    prompt = ""
+                    
+                    
+                
+                generate_button = st.button("Generate")
+                #generate_button = st.form_submit_button(label='Generate', use_container_width=True)
+                translateration = {
+                    "Self-made (no prompt)": "RMG_checkpoint.pkl",
+                    "RuGPT finetuned": "model_rugpt3large_gpt2_based.pkl",
+                }
+                if generate_button:
+                    input_features = {
+                        "model_name": translateration[model_name],
+                        "input_text": prompt,
+                    }
+                    generation_result = generate_text(input_features)
+                    INPUT_TEXT_RES = generation_result
+                    if generation_result is not None:
+                        write_generation_result(generation_result)
+                        if voice_on:
+                            get_tts_result_audio(generation_result)
+                        if chastushka_audio_on:
+                            get_chastushka_audio(generation_result)
+                        if audio_on:
+                            generate_suno_audio(generation_result, genre)
+                elif INPUT_TEXT_RES != "":
+                    write_generation_result(INPUT_TEXT_RES)
+
+@st.cache_data
 def generate_text(input_features):
     url = f"{FASTAPI_URL}/generate_text/"
     response = requests.get(url, params=input_features)
@@ -100,10 +108,12 @@ def generate_text(input_features):
         return None
         
 def write_generation_result(prediction_result):
+    global INPUT_TEXT_RES
     st.write("\n#### Result")
     with st.container(height=200, border=True):
-        st.write(prediction_result)
-        
+        INPUT_TEXT_RES = st.text_input('prediction_result', prediction_result, label_visibility='collapsed')
+    return prediction_result
+    
 def get_tts_result_audio(text):
     pass
 
