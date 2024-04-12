@@ -1,7 +1,10 @@
+import time
 import pandas as pd
 import streamlit as st
 from PIL import Image
 import requests
+import io
+import json
 
 
 FASTAPI_URL = 'https://5a1e-2a0d-5600-1b-4000-29b1-f3ac-b68e-bd02.ngrok-free.app' # 'http://localhost:8000'
@@ -54,12 +57,106 @@ def show_main_page():
                 st.write("##### Model:")
                 model_name = st.radio("Model", ("Self-made (no prompt)", "RuGPT finetuned"), label_visibility='collapsed')
                 with st.container(border=True):
+                    generate_text_pref = st.checkbox('Get Lyrics', value=True)
                     chastushka_audio_on = st.checkbox('Davay nashu (folklore)')
                     voice_on = st.checkbox('Pronounce')
                     audio_on = st.checkbox('Generate song!')
                 
                 if audio_on:
-                    genre = st.selectbox('Select song genre', ('Rock', 'Pop', 'Folk'))
+                    options = ['','Appalachian',
+                                'Bluegrass',
+                                'Country',
+                                'Folk',
+                                'Freak Folk',
+                                'Western',
+                                'Afro-Cuban',
+                                'Dance Pop',
+                                'Disco',
+                                'Dubstep',
+                                'Disco Funk',
+                                'EDM',
+                                'Electro',
+                                'High-NRG',
+                                'House',
+                                'Trance',
+                                'Ambient',
+                                'Downtempo',
+                                'Synthwave',
+                                'Trap',
+                                'Ambient',
+                                'Cyberpunk',
+                                'Drum n bass',
+                                'Dubstep',
+                                'Electronic',
+                                'Hypnogogical',
+                                'IDM',
+                                'Phonk',
+                                'Synthpop',
+                                'Techno',
+                                'Trap',
+                                'Jazz/Soul',
+                                'Bebop',
+                                'Gospel',
+                                'Electro',
+                                'Frutiger Aero',
+                                'Jazz',
+                                'Latin Jazz',
+                                'RnB',
+                                'Soul',
+                                'Latin',
+                                'Bossa Nova',
+                                'Latin Jazz',
+                                'Mambo',
+                                'Salsa',
+                                'Tango',
+                                'Reggae',
+                                'Afrobeat',
+                                'Dancehall',
+                                'Dub',
+                                'Reggae',
+                                'Reggaeton',
+                                'Metal',
+                                'Black Metal',
+                                'Deathcore',
+                                'Death Metal',
+                                'Heavy Metal',
+                                'Heavy Metal Trap',
+                                'Metalcore',
+                                'Nu Metal',
+                                'Power Metal',
+                                'Pop',
+                                'Dance Pop',
+                                'Pop Rock',
+                                'Kpop',
+                                'Jpop',
+                                'RnB',
+                                'Synthpop',
+                                'Rock',
+                                'Classic Rock',
+                                'Blues Rock',
+                                'Emo',
+                                'Glam Rock',
+                                'Hardcore Punk',
+                                'Indie',
+                                'Industrial Rock',
+                                'Punk',
+                                'Rock',
+                                'Skate Rock',
+                                'Skatecore',
+                                'Suomipop',
+                                'Urban',
+                                'Funk',
+                                'Electro',
+                                'HipHop',
+                                'RnB',
+                                'Phonk',
+                                'Rap',
+                                'Trap']
+
+                    # Добавляем возможность ввода значения, которого нет в списке
+                    st.write("Выберите или введите значение")
+                    genre_input = st.text_input('Genre', '', label_visibility='collapsed', placeholder='type some genre')
+                    genre = st.selectbox("Выберите или введите значение", options, label_visibility='collapsed')
 
                 if model_name == "RuGPT finetuned":
                     st.write("\n##### Lyrics begin with:")
@@ -73,7 +170,7 @@ def show_main_page():
                 generate_button = st.button("Generate")
                 #generate_button = st.form_submit_button(label='Generate', use_container_width=True)
                 translateration = {
-                    "Self-made (no prompt)": "RMG_checkpoint.pkl",
+                    "Self-made (no prompt)": "RMG_alpha_finetuned.pkl",
                     "RuGPT finetuned": "model_rugpt3large_gpt2_based.pkl",
                 }
                 if generate_button:
@@ -81,30 +178,50 @@ def show_main_page():
                         "model_name": translateration[model_name],
                         "input_text": prompt,
                     }
-                    generation_result = generate_text(input_features)
-                    INPUT_TEXT_RES = generation_result
-                    if generation_result is not None:
-                        write_generation_result(generation_result)
+                    # 
+                    if generate_text_pref:
+                        print("text gen")
+                        generation_result = generate_text(input_features)
+                        INPUT_TEXT_RES = generation_result
+                        if generation_result is not None:
+                            write_generation_result(generation_result)
+                            if voice_on:
+                                get_tts_result_audio(generation_result)
+                            if chastushka_audio_on:
+                                get_chastushka_audio(generation_result)
+                            if audio_on:
+                                genre = genre if genre_input == "" else genre_input
+                                generate_suno_audio(generation_result, genre)
+                    else:
+                        print("music gen")
                         if voice_on:
-                            get_tts_result_audio(generation_result)
+                            get_tts_result_audio(prompt)
                         if chastushka_audio_on:
-                            get_chastushka_audio(generation_result)
+                            get_chastushka_audio(prompt)
                         if audio_on:
-                            generate_suno_audio(generation_result, genre)
+                            genre = genre if genre_input == "" else genre_input
+                            generate_suno_audio(prompt, genre)
                 elif INPUT_TEXT_RES != "":
                     write_generation_result(INPUT_TEXT_RES)
 
 @st.cache_data
 def generate_text(input_features):
     url = f"{FASTAPI_URL}/generate_text/"
-    response = requests.get(url, params=input_features)
-    if response.status_code == 200:
-        generation_result = response.json()['generated_text']
-        return generation_result
-        #write_generation_result(generation_result)
-    else:
-        st.error("Error 😕")
-        return None
+    try:
+        response = requests.get(url, params=input_features)
+        response.raise_for_status()  # Проверка наличия ошибок при выполнении запроса
+        # Продолжайте выполнение кода здесь, используя response
+        print("Ответ получен:", response.text)
+        if response.status_code == 200:
+            generation_result = response.json()['generated_text']
+            return generation_result
+            #write_generation_result(generation_result)
+        else:
+            st.error("Error 😕")
+            return None
+    
+    except requests.exceptions.RequestException as e:
+        print("Произошла ошибка при выполнении запроса:", e)
         
 def write_generation_result(prediction_result):
     global INPUT_TEXT_RES
@@ -113,14 +230,53 @@ def write_generation_result(prediction_result):
         INPUT_TEXT_RES = st.text_input('prediction_result', prediction_result, label_visibility='collapsed')
     return prediction_result
     
-def get_tts_result_audio(text):
-    pass
+def get_tts_result_audio(input_text: str):
+    input_features = {"input_text": input_text}
+    url = f"{FASTAPI_URL}/generate_tts/"
+    response = requests.get(url, params=input_features)
+    if response.status_code == 200:
+        generation_result = response.json()['generated_tts']
+        #write_generation_result(generation_result)
+    else:
+        st.error("Error 😕")
+        return None
+    type(generation_result)
+    with open("data/tts_audio.wav", mode="bx") as audio_file:
+        audio_file.write(generation_result.encode())
+    st.audio('data/tts_audio.wav')
+
 
 def get_chastushka_audio(text):
     pass
 
 def generate_suno_audio(text, genre):
-    pass
+    URL = "https://suno-api-ts1k.vercel.app/api/custom_generate"
+    params = {"prompt": text,
+    "tags": genre,
+    "title": "generated_song",
+    "make_instrumental": False,
+    "wait_audio": False}
+    # Преобразование словаря в JSON
+    json_data = json.dumps(params)
+    # Установка заголовка Content-Type как application/json
+    headers = {'Content-Type': 'application/json'}
+    response = requests.post(URL, data=json_data, headers=headers)
+    
+    #time.sleep(10)
+    URL = "https://suno-api-ts1k.vercel.app/api/get"
+    params = {"ids": response.json()[0]['id']}
+    # Преобразование словаря в JSON
+    json_data = json.dumps(params)
+
+    # Установка заголовка Content-Type как application/json
+    headers = {'Content-Type': 'application/json'}
+    response = requests.get(URL, params=params)
+    
+    audio_bytes = requests.get(response.json()[0]['audio_url']).content
+    # Отображаем аудио в виджете
+    st.write("Generated song:")
+    st.audio(audio_bytes, format='audio/wav')
+    
 
 if __name__ == "__main__":
     process_main_page()
