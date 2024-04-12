@@ -1,6 +1,5 @@
 import pandas as pd
 import streamlit as st
-import  streamlit_toggle as tog
 from PIL import Image
 import requests
 
