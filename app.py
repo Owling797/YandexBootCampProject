@@ -5,6 +5,7 @@ from PIL import Image
 import requests
 import io
 import json
+import base64
 
 
 FASTAPI_URL = 'https://5a1e-2a0d-5600-1b-4000-29b1-f3ac-b68e-bd02.ngrok-free.app' # 'http://localhost:8000'
@@ -206,12 +207,21 @@ def show_main_page():
 
 @st.cache_data
 def generate_text(input_features):
+    #url = "https://ed45-178-154-246-234.ngrok-free.app/RMG_prediction"
+    #response = requests.post(url)
+    #generation_result = response.text
+    #write_generation_result(generation_result)
+        
     url = f"{FASTAPI_URL}/generate_text/"
     try:
         response = requests.get(url, params=input_features)
-        response.raise_for_status()  # Проверка наличия ошибок при выполнении запроса
+        #time.sleep(60*10)
+        #if response.status_code != 200:
+        #    time.sleep(60*3)
+        #response.raise_for_status()  # Проверка наличия ошибок при выполнении запроса
         # Продолжайте выполнение кода здесь, используя response
-        print("Ответ получен:", response.text)
+        #print("Ответ получен:", response.text)
+        print(response.json()['generated_text'])
         if response.status_code == 200:
             generation_result = response.json()['generated_text']
             return generation_result
@@ -221,13 +231,17 @@ def generate_text(input_features):
             return None
     
     except requests.exceptions.RequestException as e:
-        print("Произошла ошибка при выполнении запроса:", e)
+        st.error("Error 😕")
+        return None
+    
         
 def write_generation_result(prediction_result):
     global INPUT_TEXT_RES
     st.write("\n#### Result")
     with st.container(height=200, border=True):
-        INPUT_TEXT_RES = st.text_input('prediction_result', prediction_result, label_visibility='collapsed')
+        INPUT_TEXT_RES = st.write(prediction_result)
+        
+        
     return prediction_result
     
 def get_tts_result_audio(input_text: str):
@@ -240,14 +254,28 @@ def get_tts_result_audio(input_text: str):
     else:
         st.error("Error 😕")
         return None
-    type(generation_result)
-    with open("data/tts_audio.wav", mode="bx") as audio_file:
-        audio_file.write(generation_result.encode())
+    
+    print(type(generation_result))
+    with open("data/tts_audio.wav", "wb") as audio_file:
+        audio_file.write(base64.b64decode(generation_result))
     st.audio('data/tts_audio.wav')
 
 
-def get_chastushka_audio(text):
-    pass
+def get_chastushka_audio(input_text: str):
+    input_features = {"input_text": input_text}
+    url = f"{FASTAPI_URL}/generate_chastushka/"
+    response = requests.get(url, params=input_features)
+    if response.status_code == 200:
+        generation_result = response.json()['generated_chastushka']
+        #write_generation_result(generation_result)
+    else:
+        st.error("Error 😕")
+        return None
+    
+    print(type(generation_result))
+    with open("data/chast_audio.wav", "wb") as audio_file:
+        audio_file.write(base64.b64decode(generation_result))
+    st.audio('data/chast_audio.wav')
 
 def generate_suno_audio(text, genre):
     URL = "https://suno-api-ts1k.vercel.app/api/custom_generate"
@@ -262,7 +290,7 @@ def generate_suno_audio(text, genre):
     headers = {'Content-Type': 'application/json'}
     response = requests.post(URL, data=json_data, headers=headers)
     
-    #time.sleep(10)
+    time.sleep(10)
     URL = "https://suno-api-ts1k.vercel.app/api/get"
     params = {"ids": response.json()[0]['id']}
     # Преобразование словаря в JSON
