@@ -8,8 +8,10 @@ import json
 import base64
 
 
-FASTAPI_URL = 'https://5a1e-2a0d-5600-1b-4000-29b1-f3ac-b68e-bd02.ngrok-free.app' # 'http://localhost:8000'
+FASTAPI_URL = 'https://12a3-89-175-18-189.ngrok-free.app'#'https://9724-89-175-18-189.ngrok-free.app '#'https://5a1e-2a0d-5600-1b-4000-29b1-f3ac-b68e-bd02.ngrok-free.app' # 'http://localhost:8000'
 INPUT_TEXT_RES=""
+
+
 
 headers = {"Authorization": "Bearer *****"}
 #st.set_theme('dark')
@@ -185,6 +187,7 @@ def show_main_page():
                         generation_result = generate_text(input_features)
                         INPUT_TEXT_RES = generation_result
                         if generation_result is not None:
+                            print(write_generation_result)
                             write_generation_result(generation_result)
                             if voice_on:
                                 get_tts_result_audio(generation_result)
@@ -214,19 +217,23 @@ def generate_text(input_features):
         
     url = f"{FASTAPI_URL}/generate_text/"
     try:
+        print("generate_text")
         response = requests.get(url, params=input_features)
-        #time.sleep(60*10)
+        print("generate_text")
+        time.sleep(10)
         #if response.status_code != 200:
         #    time.sleep(60*3)
         #response.raise_for_status()  # Проверка наличия ошибок при выполнении запроса
         # Продолжайте выполнение кода здесь, используя response
         #print("Ответ получен:", response.text)
-        print(response.json()['generated_text'])
+        print(response)#.json()['generated_text'])
         if response.status_code == 200:
             generation_result = response.json()['generated_text']
             return generation_result
             #write_generation_result(generation_result)
         else:
+            
+            print(response)
             st.error("Error 😕")
             return None
     
@@ -239,12 +246,16 @@ def write_generation_result(prediction_result):
     global INPUT_TEXT_RES
     st.write("\n#### Result")
     with st.container(height=200, border=True):
+        prediction_result = prediction_result.replace("\\n", "\n")
+        prediction_result = prediction_result.replace("\"", "")
+        prediction_result = prediction_result.strip()
         INPUT_TEXT_RES = st.write(prediction_result)
         
         
     return prediction_result
     
 def get_tts_result_audio(input_text: str):
+    print("get_tts_result_audio")
     input_features = {"input_text": input_text}
     url = f"{FASTAPI_URL}/generate_tts/"
     response = requests.get(url, params=input_features)
@@ -278,6 +289,7 @@ def get_chastushka_audio(input_text: str):
     st.audio('data/chast_audio.wav')
 
 def generate_suno_audio(text, genre):
+    print("generate_suno_audio", text, genre)
     URL = "https://suno-api-ts1k.vercel.app/api/custom_generate"
     params = {"prompt": text,
     "tags": genre,
@@ -289,8 +301,10 @@ def generate_suno_audio(text, genre):
     # Установка заголовка Content-Type как application/json
     headers = {'Content-Type': 'application/json'}
     response = requests.post(URL, data=json_data, headers=headers)
-    
-    time.sleep(10)
+    print(response.json())
+    #while not response.json()[0]['audio_url']:
+    #    time.sleep(10)
+    time.sleep(300)
     URL = "https://suno-api-ts1k.vercel.app/api/get"
     params = {"ids": response.json()[0]['id']}
     # Преобразование словаря в JSON
