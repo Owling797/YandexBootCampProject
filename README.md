@@ -14,3 +14,11 @@ Final project for Yandex ML StudCamp 2024.
 
 
 Streamlit demo: https://lyricsgeneratorstudcamp.streamlit.app/
+
+## Authors
+
+[Owling797](https://github.com/Owling797)
+
+[mashishka](https://github.com/mashishka)
+
+Reiko
